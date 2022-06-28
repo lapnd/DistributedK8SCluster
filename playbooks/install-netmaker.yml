@@ -1,0 +1,28 @@
+---
+- name: Debian -- add to VPN
+  hosts: all
+  become: true
+  tasks:
+    - name: Install gpg
+      apt: 
+        name: gpg
+        state: present
+    - name: Add netclient apt-key 
+      apt_key: 
+        url: https://apt.netmaker.org/gpg.key
+        state: present 
+    - name: Add netclient repository
+      apt_repository: 
+        repo: 'deb https:apt.netmaker.org stable main' 
+        state: present 
+        filename: netclient 
+        update_cache: yes
+    - name: Install netclient
+      apt: 
+        name: netclient
+        state: present
+    - name: Enable netclient
+      systemd:
+        name: netclient
+        state: started
+        enabled: true

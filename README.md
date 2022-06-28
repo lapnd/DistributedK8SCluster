@@ -4,10 +4,19 @@ There are a lot of challenges to making a distributed K8S cluster where nodes ar
 
 * Allowing nodes to access eachother (VPN)
 * Configuring the nodes as worker / master nodes
+* Ensuring nodes use the correct (VPN) IP addresses
 * Configuring a network plugin that works over the VPN
 * Enabling LoadBalancers and Ingress 
 * Exposing services to the Internet, and dealing with ingress / egress points to the cluster
 * Managing machine outages without physical access
+
+This ignores the normal challenges of creating a K8S server, such as:
+
+* Security
+* Network policy
+* Backups, restoration, and other operations
+* User management
+* Secret management
 
 To solve these problems, this project creates a series of Terraform resources and Ansible playbooks which configure a distributed K8S cluster.
 
@@ -35,3 +44,41 @@ The cloud machine runs the Netmaker VPN and provides ingress. Physical machines 
 Note that Netmaker is a mesh solution, which is not shown in the diagram. No DNS server is needed because Netmaker directly edits the `hosts` file of each machine.
 
 Each physical machine and VM will run a lightweight SSH server (Dropbear) to provide remote access. 
+
+### What we tested with
+
+* Proxmox 7.2
+
+We had trouble installing this. Grub wouldn't detect the USB. We went into grub by pressing `c`, printed the drives (`ls`), found our drive and set it with the command `set root=(hd1,gpt3)`. Then when we did `ls /` we could see files that were clearly proxmox. We then set the loader with `chainloader /efi/boot/bootx64.efi` and ran `boot`.
+
+
+### Working notes
+
+#### Proxmox setup
+
+install `apt install wireguard-dkms` before `netclient`
+
+Disable the enterprise repository
+vi /etc/apt/sources.list.d/pve-enterprise.list
+by commenting the line
+#deb https://enterprise.proxmox.com/debian/pve bullseye pve-enterprise
+and enable the "no-subscription" repository by creating a new file
+vi /etc/apt/sources.list.d/pve-no-subscription.list
+with
+deb http://download.proxmox.com/debian/pve bullseye pve-no-subscription
+
+### Setup notes
+
+Got the master / worker to create succesfully using:
+```bash
+kubeadm init --apiserver-advertise-address $IPADDR --apiserver-cert-extra-sans kfs-master.vms --pod-network-cidr 10.244.0.0/16 --node-name kfs-master --ignore-preflight-errors Swap --cri-socket unix:///var/run/containerd/containerd.sock --control-plane-endpoint kfs-master.vms
+```
+
+The key was to use the fully qualified domain name for `--apiserver-cert-extra-sans` and `--control-plane-endpoint`. With netmaker this can't be automatically found because there's no DNS server. The correct value can be found in the `/etc/hosts` file but will take some parsing. The format is `{hostname}.{networkname}`
+
+
+- will need to set worker node ips on startup... perhaps in the `/etc/sysconfig/kubelet` file after we connect to netmaker. See [this](https://stackoverflow.com/questions/54942488/how-to-change-the-internal-ip-of-kubernetes-worker-nodes)
+
+make sure we bind flannel to the right iface
+
+mark a node as egress so other machines can talk to pods / services, bind egress to flannel iface

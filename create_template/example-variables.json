@@ -1,0 +1,10 @@
+{
+    "proxmox_host": "192.168.0.5:8006",
+    "proxmox_node": "node-lenovo",
+    "proxmox_api_user": "root@pam",
+    "proxmox_api_password": "KFSCloud",
+    "template_name": "debian-template",
+    "username": "cloud",
+    "password": "KFSCloud",
+    "root_password": "KFSCloud"
+}
