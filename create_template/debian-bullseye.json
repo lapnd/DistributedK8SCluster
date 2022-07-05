@@ -14,7 +14,7 @@
         "username": "{{ user `proxmox_api_user` }}",
         "password": "{{ user `proxmox_api_password` }}",
   
-        "template_description": "Debian 11 cloud-init template. Built on {{ isotime \"2006-01-02T15:04:05Z\" }}",
+        "template_description": "Debian 11 template for use in a K8S network.",
         "node": "{{user `proxmox_node`}}",
         "network_adapters": [
           {
@@ -25,17 +25,17 @@
         ],
         "disks": [
           {
-            "type": "scsi",
+            "type": "virtio",
             "disk_size": "20G",
-            "storage_pool": "local-lvm",
-            "storage_pool_type": "lvm",
+            "storage_pool": "{{user `storage_pool`}}",
+            "storage_pool_type": "{{user `storage_pool_type`}}",
             "format": "raw",
             "io_thread": true
           }
         ],
         "scsi_controller": "virtio-scsi-single",
   
-        "iso_file": "local:iso/debian.iso",
+        "iso_file": "local:iso/{{user `iso`}}",
         "http_directory": "./",
         "boot_wait": "10s",
         "boot_command": [
@@ -44,7 +44,7 @@
         "unmount_iso": true,
   
         "cloud_init": true,
-        "cloud_init_storage_pool": "local-lvm",
+        "cloud_init_storage_pool": "{{user `cloud_init_storage_pool`}}",
   
         "vm_name": "{{ user `template_name` }}",
         "vm_id": "{{ user `vmid` }}",
