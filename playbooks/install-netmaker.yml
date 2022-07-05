@@ -26,3 +26,11 @@
         name: netclient
         state: started
         enabled: true
+    - name: Create initial installation script
+      copy:
+        dest: "/install_vpn.sh"
+        mode: a+x
+        content: |
+          #!/bin/bash
+          netclient join -t '{{ netmaker_token }}'
+          rm /install_vpn.sh
