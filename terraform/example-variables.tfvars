@@ -1,0 +1,10 @@
+pm_password = "KFSCloud"
+pm_user = "root@pam"
+pm_api_url = "192.168.0.5"
+name = "master-node-1"
+target_node = "kfscluster"
+memory = 2048
+cores = 4
+sockets = 1
+cpu = "host"
+template_name = "debian-template"
