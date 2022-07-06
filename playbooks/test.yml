@@ -1,0 +1,11 @@
+---
+- name: Test playbook
+  hosts: all
+  become: true
+  tasks:
+    - name: Dummy job
+      copy:
+        dest: "/dummy.txt"
+        mode: a+x
+        content: |
+          haha hi!

@@ -58,6 +58,36 @@ variable "template_name" {
   description = "Name of the template to clone."
 }
 
+variable "pm_pam_user" {
+  type        = string
+  default     = "root"
+  description = "User with SSH access to the Proxmox machine."
+}
+
+variable "pm_pam_password" {
+  type        = string
+  default     = "KFSCloud"
+  description = "Password for user with SSH access to the Proxmox machine."
+}
+
+variable "vm_username" {
+  type        = string
+  default     = "cloud"
+  description = "User with SSH access to the new VM."
+}
+
+variable "vm_password" {
+  type        = string
+  default     = "KFSCloud"
+  description = "Password to the SSH user on the new VM."
+}
+
+variable "vm_root_password" {
+  type        = string
+  default     = "KFSCloud"
+  description = "Password for the root user on the new VM."
+}
+
 terraform {
   required_providers {
     proxmox = {
@@ -75,7 +105,7 @@ provider "proxmox" {
   pm_user = var.pm_user
 }
 
-resource "proxmox_vm_qemu" "k8s-node" {
+resource "proxmox_vm_qemu" "k8s_node" {
   name        = var.name
   bios        = "seabios"
   target_node = var.target_node
@@ -104,5 +134,26 @@ resource "proxmox_vm_qemu" "k8s-node" {
 
   # The template name to clone this vm from
   clone       = var.template_name
+  full_clone  = false
+  agent       = 1
+}
 
+resource "local_file" "ip" {
+  filename = "inventory"
+  content  = <<-EOT
+    [nodes]
+    ${proxmox_vm_qemu.k8s_node.default_ipv4_address}
+    
+    [nodes:vars]
+    ansible_ssh_common_args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand=\"sshpass -p '${var.pm_pam_password}' ssh -W %h:%p -q ${var.pm_pam_user}@${var.pm_api_url}\""
+
+    ansible_connection=ssh
+    ansible_user=${var.vm_username}
+    ansible_ssh_pass=${var.vm_password}
+    ansible_become_pass=${var.vm_root_password}
+  EOT
+
+  provisioner "local-exec" {
+    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory ../playbooks/test.yml || rm inventory"
+  }
 }
