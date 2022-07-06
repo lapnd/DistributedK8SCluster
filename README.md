@@ -12,7 +12,7 @@ There are a lot of challenges to making a distributed K8S cluster where nodes ar
 
 To solve these problems, this project creates a series of Terraform resources and Ansible playbooks which configure a distributed K8S cluster.
 
-## How it works
+# How it works
 
 ### Requirements
 
@@ -39,15 +39,15 @@ Note that Netmaker is a mesh solution, which is not shown in the diagram. No DNS
 
 Each physical machine and VM will run an SSH server to provide remote access. 
 
-## Getting Started
+# Getting Started
 
-### Netmaker Setup
+## Netmaker Setup
 
 Follow [these instructions](https://docs.netmaker.org/quick-start.html) to set up your netmaker machine. This should be the cloud device hosted on an external provider. 
 
 After this is set up, create two networks: one for the Proxmox machines, and one for the VMs. For each network, create an access token. Especially for the VM network, make sure the number of uses on the access token is sufficiently high that you won't run out, as this token will be used to automatically provision VMs. 
 
-### Proxmox Setup
+## Proxmox Setup
 
 We installed Proxmox 7.2. Make sure to update the apt repository at `/etc/apt/sources.list.d/pve-enterprise.list` by commenting out the `deb https://enterprise.proxmox.com/debian/pve bullseye pve-enterprise` line. Then add the no-subscription repository with 
 
@@ -59,7 +59,7 @@ Make sure the Proxmox machine has a valid hosts file. Importatly, ensure `ping l
 
 Ensure each machine has a useful hostname, as this will become an addressable name on the Netmaker VPN. You can change it with `hostnamectl set-hostname {name-here}`. Before seting up the VPN, install wireguard libraries with `apt install wireguard-dkms`. This ensures `netclient` has all the software it needs without it overwriting libraries Proxmox needs. Then add the hypervisor to the VPN on the appropriate network by following [these instructions](https://docs.netmaker.org/netclient.html).
 
-### Create a master node
+## Create a master node
 
 #### Create a VM template
 
@@ -87,22 +87,27 @@ cd create_template
 packer build -var-file example-variables.json debian-bullseye.json
 ```
 
-#### Create a master node
+#### Create the first master node
 
 Ensure you are on a machine with access to the Proxmox API and has Terraform installed. Then make sure the variable values in `terraform/example-variables.tfvars` are correct, and run:
 
 ```bash
 cd terraform
 terraform init
-terraform apply
 terraform apply -auto-approve -var-file="example-variables.tfvars"
 ```
 
 This will create a new, unprovisioned node. 
 
-### Create a worker node (VM)
+#### Create more master nodes
 
-### Create a worker node (edge device)
+The process of adding new master nodes to the control plane is different than to create the first master node.
+
+## Create a worker node (VM)
+
+## Create a worker node (edge device)
+
+## Ingress
 
 ## Working notes
 
