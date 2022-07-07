@@ -45,7 +45,7 @@ Each physical machine and VM will run an SSH server to provide remote access.
 
 Follow [these instructions](https://docs.netmaker.org/quick-start.html) to set up your netmaker machine. This should be the cloud device hosted on an external provider. 
 
-After this is set up, create two networks: one for the Proxmox machines, and one for the VMs. For each network, create an access token. Especially for the VM network, make sure the number of uses on the access token is sufficiently high that you won't run out, as this token will be used to automatically provision VMs. 
+After this is set up, create two networks: one for the Proxmox machines, and one for the VMs. **Make sure these networks do not have the '.' character in their names, or it may break provisioning scripts.** For each network, create an access token. Especially for the VM network, make sure the number of uses on the access token is sufficiently high that you won't run out, as this token will be used to automatically provision VMs. 
 
 ## Proxmox Setup
 
@@ -57,11 +57,11 @@ echo deb http://download.proxmox.com/debian/pve bullseye pve-no-subscription > /
 
 Make sure the Proxmox machine has a valid hosts file. Importatly, ensure `ping localhost` works. If it doesn't, add an entry for `localhost` to the `/etc/hosts` file.
 
-Ensure each machine has a useful hostname, as this will become an addressable name on the Netmaker VPN. You can change it with `hostnamectl set-hostname {name-here}`. Before seting up the VPN, install wireguard libraries with `apt install wireguard-dkms`. This ensures `netclient` has all the software it needs without it overwriting libraries Proxmox needs. Then add the hypervisor to the VPN on the appropriate network by following [these instructions](https://docs.netmaker.org/netclient.html).
+Ensure each machine has a useful hostname, as this will become an addressable name on the Netmaker VPN. **Make sure these hosts do not have the '.' character in their names, or it may break provisioning scripts.** You can change it with `hostnamectl set-hostname {name-here}`. Before seting up the VPN, install wireguard libraries with `apt install wireguard-dkms`. This ensures `netclient` has all the software it needs without it overwriting libraries Proxmox needs. Then add the hypervisor to the VPN on the appropriate network by following [these instructions](https://docs.netmaker.org/netclient.html).
 
 ## Create a master node
 
-#### Create a VM template
+### Create a VM template
 
 Before creating a master node, we need to create a template on Proxmox. This template will have VPN already configured, as well as a lot of necesarry provisioning to run Kubernetes. Additionally, using a template means that spining up a new VM takes seconds insteads of ~10 minutes. To create the template:
 
@@ -87,19 +87,74 @@ cd create_template
 packer build -var-file example-variables.json debian-bullseye.json
 ```
 
-#### Create the first master node
+**Note**: the VM ID of the template is set at a constant high value because Terraform tries to clubber the template when adding nodes.
 
-Ensure you are on a machine with access to the Proxmox API and has Terraform installed. Then make sure the variable values in `terraform/example-variables.tfvars` are correct, and run:
+### Create the first master node
 
-```bash
-cd terraform
-terraform init
-terraform apply -auto-approve -var-file="example-variables.tfvars"
+Ensure you are on a machine with access to the Proxmox API and has Terraform + Ansible installed. Then make a new folder for your cluster and add the first Terraform module:
+
+```
+mkdir cluster
+cp k8s-template.tf cluster/master-node-1.tf
 ```
 
-This will create a new, unprovisioned node. 
+Then edit `cluster/master-node-1.tf`. Change the values of the local variables so they are correct to your cluster. In particular, ensure `playbook` is the following:
 
-#### Create more master nodes
+```
+playbook = "first-master-node.yml"
+```
+
+The variable `ansible_playbook_dir` controls the location of the ansible playbook directory relative to your `.tf` file. The default value assumes a directory strucrture like
+
+```
+DistributedK8SCluster/
+  cluster/
+    master-node-1.tf
+  playbooks/
+```
+
+However, your Terraform modules could be located somewhere else. For example, if `DistributedK8SCluster` is installed as a submodule in another repo, your file system might look like this:
+
+```
+MyCluster/
+  modules/
+    master-node-1.tf
+  DistributedK8SCluster/
+    playbooks/
+```
+
+then you should change the `ansible_playbook_dir` variable so the module knows where to find the playbooks:
+
+```
+variable "ansible_playbook_dir" {
+  type    = string
+  default = "../DistributedK8SCluster/playbooks"
+}
+```
+
+Then rename the two resources to have unique, meaningful names:
+
+```
+resource "proxmox_vm_qemu" "k8s_master_1" {
+    ...
+}
+
+resource "local_file" "make_inventory_file_1" {
+    ...
+}
+```
+
+It's then time to create the node with:
+
+```bash
+cd cluster
+terraform init
+terraform apply -auto-approve
+```
+
+This will create a Kubernetes master node with a new control plane.
+
+### Create more master nodes
 
 The process of adding new master nodes to the control plane is different than to create the first master node.
 
@@ -113,16 +168,8 @@ The process of adding new master nodes to the control plane is different than to
 
 ### Setup notes
 
-Got the master / worker to create succesfully using:
-```bash
-kubeadm init --apiserver-advertise-address $IPADDR --apiserver-cert-extra-sans k8s-master-1.vms --pod-network-cidr 10.244.0.0/16 --node-name k8s-master-1 --ignore-preflight-errors Swap --cri-socket unix:///var/run/containerd/containerd.sock --control-plane-endpoint k8s-master-1.vms
-```
-
-The key was to use the fully qualified domain name for `--apiserver-cert-extra-sans` and `--control-plane-endpoint`. With netmaker this can't be automatically found because there's no DNS server. The correct value can be found in the `/etc/hosts` file but will take some parsing. The format is `{hostname}.{networkname}`
-
 
 - will need to set worker node ips on startup... perhaps in the `/etc/sysconfig/kubelet` file after we connect to netmaker. See [this](https://stackoverflow.com/questions/54942488/how-to-change-the-internal-ip-of-kubernetes-worker-nodes)
 
-make sure we bind flannel to the right iface
 
 mark a node as egress so other machines can talk to pods / services, bind egress to flannel iface

@@ -1,0 +1,8 @@
+---
+- name: Create a K8S master node with a new control plane
+  hosts: all
+  become: true
+  tasks:
+    - name: Provision first master node
+      ansible.builtin.script:
+        cmd: ./provision.sh create_first

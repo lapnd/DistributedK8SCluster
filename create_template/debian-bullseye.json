@@ -47,7 +47,7 @@
         "cloud_init_storage_pool": "{{user `cloud_init_storage_pool`}}",
   
         "vm_name": "{{ user `template_name` }}",
-        "vm_id": "{{ user `vmid` }}",
+        "vm_id": 10000,
         "memory": "2048",
         
         "sockets": "1",
