@@ -10,7 +10,7 @@ There are a lot of challenges to making a distributed K8S cluster where nodes ar
 * Exposing services to the Internet, and dealing with ingress / egress points to the cluster
 * Managing machine outages without physical access
 
-To solve these problems, this project creates a series of Terraform resources and Ansible playbooks which configure a distributed K8S cluster.
+To solve these problems, this project creates a series of Terraform resources and Ansible playbooks which configure a distributed K8S cluster. To understand how we got to this technology stack and why we selected it, read our [Tech Overview](./TechOverview.md).
 
 # How it works
 
@@ -45,7 +45,7 @@ Each physical machine and VM will run an SSH server to provide remote access.
 
 Follow [these instructions](https://docs.netmaker.org/quick-start.html) to set up your netmaker machine. This should be the cloud device hosted on an external provider. 
 
-After this is set up, create two networks: one for the Proxmox machines, and one for the VMs. **Make sure these networks do not have the '.' character in their names, or it may break provisioning scripts.** For each network, create an access token. Especially for the VM network, make sure the number of uses on the access token is sufficiently high that you won't run out, as this token will be used to automatically provision VMs. 
+After this is set up, create two networks: one for the Proxmox machines, and one for the VMs. **Make sure these networks do not have the '.' character in their names, or it may break provisioning scripts.** For each network, create an access token. Especially for the VM network, make sure the number of uses on the access token is sufficiently high that you won't run out, as this token will be used to automatically provision VMs. We suggust turning UDP hole punching on for these networks, as without this there may be connection problems -- especially for the VM network.
 
 ## Proxmox Setup
 
