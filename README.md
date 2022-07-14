@@ -154,6 +154,12 @@ terraform apply -auto-approve
 
 This will create a Kubernetes master node with a new control plane.
 
+We then need to add this node as an egress point to the pod network. Otherwise, pods on different nodes won't be able to access eachother, and services with external IPs won't be externally accessable. Ensure that in Netmaker, the egress gateway range for the VM looks like the following:
+
+![Netmaker Egress](img/egress.png)
+
+You will need to do this for all nodes added to the K8S network.
+
 ### Create more master nodes
 
 The process of adding new master nodes to the control plane is different than to create the first master node.
