@@ -41,6 +41,8 @@ Each physical machine and VM will run an SSH server to provide remote access.
 
 # Getting Started
 
+This project is intended to be added as a submodule to some other repository. This repository would contain customizations and configuration information for your specific cluster, allowing you to have infrastructure as code. This comes with many posible benefits such as version control, code review, and automated deployments. However, this project can also be used directly by editing the files as you desire.
+
 ## Netmaker Setup
 
 Follow [these instructions](https://docs.netmaker.org/quick-start.html) to set up your netmaker machine. This should be the cloud device hosted on an external provider. 
@@ -65,7 +67,12 @@ Ensure each machine has a useful hostname, as this will become an addressable na
 
 Before creating a master node, we need to create a template on Proxmox. This template will have VPN already configured, as well as a lot of necesarry provisioning to run Kubernetes. Additionally, using a template means that spining up a new VM takes seconds insteads of ~10 minutes. To create the template:
 
-1. Clone this repository on a machine with SSH access to newly created VMs. In order to provision the template, we use Ansible playbooks which require SSH access to the VM before VPN is setup. The Proxmox machine should always work, as well as any machine on the same LAN as the Proxmox server.
+0. Add this project as a submodule:
+```bash
+git submodule add https://github.com/CalvinKrist/DistributedK8SCluster.git DistributedK8SCluster
+```
+
+1. Clone this repository on a machine with SSH access to newly created VMs. In order to provision the template, we use Ansible playbooks which require SSH access to the VM before VPN is setup. The Proxmox machine should always work, as well as any machine on the same LAN as the Proxmox server. Alternatively, you can add this as a submodule to an existing repository.
 
 2. [Install Packer](https://learn.hashicorp.com/tutorials/packer/get-started-install-cli). This allows us to create the template from an ISO. 
 
@@ -78,14 +85,41 @@ apt install ansible
 
 4. Install the Debian ISO on your Proxmox node. We use the [Debian 11.3.0-amd-64 image](https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-11.3.0-amd64-netinst.iso).
 
-5. Configure the variables in `create_template/example-variables.json`
-
-6. Create the template:
+5. Copy the example variables and edit them to suit your needs:
 
 ```bash
-cd create_template
-packer build -var-file example-variables.json debian-bullseye.json
+cp DistributedK8SCluster/create_template/example-variables.json ./my-variables.json
 ```
+
+Your file structure would then look like:
+```
+my-repo:
+  DistributedK8SCluster:
+    create_template:
+      example-variables.json
+      make_template.py
+  my-variables.json
+```
+
+6. If you want to customize the installation, ie to have your own scripts add additional features to the template, make a bash script with your customizations.
+
+```
+my-repo:
+  DistributedK8SCluster:
+    create_template:
+      example-variables.json
+      make_template.py
+  my-variables.json
+  my-customizations.sh
+```
+
+7. Create the template. The customizations argument is optional.
+
+```bash
+python3 DistributedK8SCluster/create_template/make_template.py var-file=my-variables.json customization=my-customizations.sh
+```
+
+The python script is a thin wrapper around Packer. It dynamically generates a JSON config for Packer. This is because conditional logic cannot be expressed in JSON.
 
 **Note**: the VM ID of the template is set at a constant high value because Terraform tries to clubber the template when adding nodes.
 
