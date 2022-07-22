@@ -34,7 +34,7 @@ template = {
             "disks": [
                 {
                     "type": "scsi",
-                    "disk_size": "20G",
+                    "disk_size": "{{user `disk_size`}}",
                     "storage_pool": "{{user `storage_pool`}}",
                     "storage_pool_type": "{{user `storage_pool_type`}}",
                     "format": "raw",
