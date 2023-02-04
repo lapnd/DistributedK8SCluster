@@ -19,7 +19,7 @@
         update_cache: yes
     - name: Install netclient
       apt: 
-        name: netclient
+        name: netclient=0.14.3-0
         state: present
     - name: Enable netclient
       systemd:
