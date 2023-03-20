@@ -6,3 +6,9 @@
     - name: Provision first master node
       ansible.builtin.script:
         cmd: ./provision.sh create_first
+    - name: Set certificate rotation
+      lineinfile: 
+        path: /var/lib/kubelet/config.yaml
+        regexp: 'rotateCertificates: (true|false)' 
+        line: 'rotateCertificates: {{ rotate_certificates }}'
+        backrefs: yes

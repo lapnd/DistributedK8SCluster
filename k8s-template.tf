@@ -35,6 +35,9 @@ locals {
   inventory_file = "inventory1"
   # Which playbook from ../playbooks to provision the machine with
   playbook = "my-playbook.yml"
+
+  # Arguments for the K8S playbooks
+  rotate_certificates = true
 }
 
 terraform {
@@ -107,7 +110,7 @@ resource "local_file" "make_inventory_file" {
   EOT
 
   provisioner "local-exec" {
-    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${local.inventory_file} ${var.ansible_playbook_dir}/${local.playbook}"
+    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${local.inventory_file} ${var.ansible_playbook_dir}/${local.playbook} --extra-vars 'rotate_certificates='${local.rotate_certificates}'"
   }
 
   provisioner "local-exec" {
