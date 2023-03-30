@@ -77,14 +77,10 @@
       become: true
       shell:
         "install -m 755 /tmp/runc.amd64 /usr/local/sbin/runc"
-    - name: Make flanneld directory
-      file:
-        path: /opt/bin
-        state: directory
-    - name: Download flanneld binary
-      get_url: 
-        url: https://github.com/flannel-io/flannel/releases/download/v0.18.1/flanneld-amd64
-        dest : /opt/bin/flanneld
+    - name: Install Cilium CLI
+      ansible.builtin.script: ./install-cilium-cli.sh create_first
+      args:
+        executable: /usr/bin/bash
     - name: Create /etc/modules-load.d/k8s.conf
       copy:
         dest: "/etc/modules-load.d/k8s.conf"

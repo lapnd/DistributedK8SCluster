@@ -39,10 +39,8 @@ create_first_node() {
   kubectl taint nodes --all node-role.kubernetes.io/master-
   kubectl taint node $HOSTNAME node-role.kubernetes.io/control-plane:NoSchedule-
 
-  # Set up flannel
-  wget https://raw.githubusercontent.com/flannel-io/flannel/ae97c32eb19191cef160585362408d69833338cf/Documentation/kube-flannel.yml
-  sed -i "s/kube-subnet-mgr/kube-subnet-mgr\n        - --iface=$NM_IFACE/g" kube-flannel.yml
-  kubectl apply -f kube-flannel.yml
+  # Set up cilium
+  cilium install
 
   # Set up metallb (requires helm)
   curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
