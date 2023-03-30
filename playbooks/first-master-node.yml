@@ -1,14 +1,15 @@
 ---
 - name: Create a K8S master node with a new control plane
-  hosts: all
+  hosts: first-master-node
   become: true
   tasks:
     - name: Provision first master node
-      ansible.builtin.script:
-        cmd: ./provision.sh create_first
+      ansible.builtin.script: ./provision.sh create_first
+      args:
+        executable: /usr/bin/bash
     - name: Set certificate rotation
       lineinfile: 
         path: /var/lib/kubelet/config.yaml
         regexp: 'rotateCertificates: (true|false)' 
-        line: 'rotateCertificates: {{ rotate_certificates }}'
+        line: 'rotateCertificates: {{ rotateCertificates }}'
         backrefs: yes

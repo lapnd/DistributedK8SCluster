@@ -9,12 +9,12 @@ USAGE="Usage: [create_first,add_master,add_worker]"
 set -x
 
 # Wait until the vpn has been set up and the script is deleted
-test -f /install_vpn.sh
-while [ $? -eq 0 ]
-do
-  sleep 1
-  test -f /install_vpn.sh
-done
+# test -f /install_vpn.sh
+# while [ $? -eq 0 ]
+# do
+#   sleep 1
+#   test -f /install_vpn.sh
+# done
 
 set -e
 sleep 10
@@ -27,6 +27,7 @@ VPN_IP=$(ip -f inet addr show $NM_IFACE  | sed -En -e 's/.*inet ([0-9.]+).*/\1/p
 
 create_first_node() {
   # Initialize kubelet
+  kubeadm reset -f
   kubeadm init --apiserver-advertise-address $VPN_IP --apiserver-cert-extra-sans $FQDN --pod-network-cidr 10.244.0.0/16 --node-name $HOSTNAME --ignore-preflight-errors Swap --cri-socket unix:///var/run/containerd/containerd.sock --control-plane-endpoint $FQDN
 
   # Setup kube config
@@ -92,6 +93,6 @@ case "$1" in
     echo "Adding a master node"
     ;;
   "add_worker")
-    echo "Adding a master node"
+    echo "Adding a worker node to master node $2"
     ;;
 esac

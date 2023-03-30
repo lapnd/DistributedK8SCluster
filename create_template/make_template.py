@@ -5,6 +5,27 @@ import tempfile
 import subprocess
 import os
 
+args = sys.argv
+
+customziation_script = None
+var_file = None
+
+for i in range(1, len(args)):
+    token = args[i]
+    tokens = token.split("=")
+
+    if len(tokens) == 2:
+        if tokens[0] == "customization":
+            customziation_script = Path(tokens[1])
+        elif tokens[0] == "var-file":
+            var_file = Path(tokens[1])
+        else:
+            print(f"Invalid argument: {token}")
+            exit(1)
+    else:
+        print(f"Invalid argument: {token}")
+        exit(1)
+
 
 template = {
     "variables": {
@@ -55,7 +76,7 @@ template = {
             "cloud_init_storage_pool": "{{user `cloud_init_storage_pool`}}",
 
             "vm_name": "{{ user `template_name` }}",
-            "vm_id": 10000,
+            "vm_id": "{{ user `vm_id` }}",
             "memory": "2048",
 
             "sockets": "1",
@@ -85,27 +106,6 @@ template = {
         }
     ]
 }
-
-args = sys.argv
-
-customziation_script = None
-var_file = None
-
-for i in range(1, len(args)):
-    token = args[i]
-    tokens = token.split("=")
-
-    if len(tokens) == 2:
-        if tokens[0] == "customization":
-            customziation_script = Path(tokens[1])
-        elif tokens[0] == "var-file":
-            var_file = Path(tokens[1])
-        else:
-            print(f"Invalid argument: {token}")
-            exit(1)
-    else:
-        print(f"Invalid argument: {token}")
-        exit(1)
 
 if customziation_script:
     print(f"Adding customizations at {customziation_script.resolve()}")

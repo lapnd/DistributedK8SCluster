@@ -1,0 +1,8 @@
+---
+- name: Create a K8S worker node and connect it to the control pane
+  hosts: workers
+  become: true
+  tasks:
+    - name: Provision first master node
+      ansible.builtin.script:
+        cmd: ./provision.sh add_worker {{ masterNode }}
