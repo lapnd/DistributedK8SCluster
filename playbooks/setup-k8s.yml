@@ -21,6 +21,10 @@
       become: true
       shell:
         "swapoff -a && sed -i '/ swap / s/^\\(.*\\)$/#\\1/g' /etc/fstab"
+    - name: Install gpg
+      apt: 
+        name: gpg
+        state: present
     - name: Install apt-transport-https
       apt: 
         name: apt-transport-https
@@ -41,7 +45,7 @@
       apt_repository: 
         repo: 'deb https://apt.kubernetes.io/ kubernetes-xenial main' 
         state: present 
-        filename: netclient 
+        filename: kubernetes 
         update_cache: yes
     - name: Install kubelet
       apt: 

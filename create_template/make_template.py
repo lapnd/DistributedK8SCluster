@@ -48,8 +48,9 @@ template = {
             "network_adapters": [
                 {
                     "model": "virtio",
-                    "bridge": "vmbr0",
-                    "firewall": True
+                    "bridge": "{{user `bridge`}}",
+                    "firewall": True,
+                    "mtu": 1230
                 }
             ],
             "disks": [
@@ -96,13 +97,8 @@ template = {
         },
         {
             "type": "ansible",
-            "playbook_file": "../playbooks/install-netmaker.yml",
-            "extra_arguments": ["--extra-vars", "{'netmaker_token': '{{user `netmaker_token`}}'}"]
-        },
-        {
-            "type": "ansible",
             "playbook_file": "../playbooks/setup-k8s.yml",
-            "extra_arguments": ["--extra-vars", "{'root_password': '{{user `root_password`}}', 'username': '{{user `username`}}', 'password': '{{user `password`}}'}"]
+            "extra_arguments": ["--extra-vars", "{'root_password': '{{user `root_password`}}', 'username': '{{user `username`}}', 'password': '{{user `password`}}'}", "-vvv"]
         }
     ]
 }

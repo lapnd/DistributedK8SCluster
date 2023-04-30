@@ -6,17 +6,8 @@
 
 USAGE="Usage: [create_first,add_master,add_worker]"
 
-set -x
+set -xe
 
-# Wait until the vpn has been set up and the script is deleted
-# test -f /install_vpn.sh
-# while [ $? -eq 0 ]
-# do
-#   sleep 1
-#   test -f /install_vpn.sh
-# done
-
-set -e
 sleep 10
 FQDN=$(hostname -A)
 HOSTNAME=$(hostname -s)
@@ -38,11 +29,6 @@ create_first_node() {
   # Untaint master (necesarry to ensure metallb can run, as the API pod needs to be schedulable)
   kubectl taint nodes --all node-role.kubernetes.io/master-
   kubectl taint node $HOSTNAME node-role.kubernetes.io/control-plane:NoSchedule-
-
-  # Set up flannel
-  wget https://raw.githubusercontent.com/flannel-io/flannel/ae97c32eb19191cef160585362408d69833338cf/Documentation/kube-flannel.yml
-  sed -i "s/kube-subnet-mgr/kube-subnet-mgr\n        - --iface=$NM_IFACE/g" kube-flannel.yml
-  kubectl apply -f kube-flannel.yml
 
   # Set up metallb (requires helm)
   curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3

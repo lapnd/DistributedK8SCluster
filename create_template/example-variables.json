@@ -12,5 +12,6 @@
     "storage_pool": "local-lvm",
     "storage_pool_type": "lvm",
     "cloud_init_storage_pool": "local-lvm",
-    "disk_size": "20G"
+    "disk_size": "20G",
+    "bridge": "vmbr0"
 }
