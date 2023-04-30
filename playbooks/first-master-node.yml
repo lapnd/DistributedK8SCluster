@@ -7,6 +7,11 @@
       ansible.builtin.script: ./provision.sh create_first
       args:
         executable: /usr/bin/bash
+    - name: Enable ExtendedResourceToleration in kube-apiserver
+      ansible.builtin.replace:
+        path: /etc/kubernetes/manifests
+        regexp: ^(\s*- --enable-admission-plugins=.*$)(?<!,ExtendedResourceToleration)
+        replace: \1,ExtendedResourceToleration
     - name: Set certificate rotation
       lineinfile: 
         path: /var/lib/kubelet/config.yaml
