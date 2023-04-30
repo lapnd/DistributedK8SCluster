@@ -1,0 +1,33 @@
+---
+- name: Create a K8S master node with a new control plane
+  hosts: first-master-node
+  become: true
+  tasks:
+    - name: Provision first master node
+      ansible.builtin.script: ./provision.sh create_first
+      args:
+        executable: /usr/bin/bash
+    - name: Set certificate rotation
+      lineinfile: 
+        path: /var/lib/kubelet/config.yaml
+        regexp: 'rotateCertificates: (true|false)' 
+        line: 'rotateCertificates: {{ rotateCertificates }}'
+        backrefs: yes
+    - name: Get Discovery Token
+      command: openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+      register: discovery-token
+    - name: Get Auth Token
+      command: kubeadm token create
+      register: auth-token
+- name: Add a K8S node to the control plane
+  hosts: other-master-node
+  become: true
+  tasks:
+    - name: Join master node to cluster
+      command: kubeadm join --token {{ auth-token.stdout }} {{ masterNode }}:6443 --discovery-token-ca-cert-hash {{ discovery-token.stdout }} --cri-socket unix:///var/run/containerd/containerd.sock --control-plane
+- name: Create a K8S worker node and connect it to the control pane
+  hosts: workers
+  become: true
+  tasks:
+    - name: Join worker node to cluster
+      command: kubeadm join --token {{ auth-token.stdout }} {{ masterNode }}:6443 --discovery-token-ca-cert-hash {{ discovery-token.stdout }} --cri-socket unix:///var/run/containerd/containerd.sock

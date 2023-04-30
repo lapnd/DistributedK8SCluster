@@ -1,9 +1,0 @@
----
-- name: Add a K8S node to the control plane
-  hosts: other-master-node
-  become: true
-  tasks:
-    - name: Provision a master node and add it to the control plane
-      ansible.builtin.script: ./provision.sh add_master {{ masterNode }}
-      args:
-        executable: /usr/bin/bash

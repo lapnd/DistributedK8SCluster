@@ -83,6 +83,8 @@ apt update
 apt install ansible
 ```
 
+3. Run the `./get-packer-plugins.sh` script to get the necesarry proxmox plugins.
+
 4. Install the Debian ISO on your Proxmox node. We use the [Debian 11.3.0-amd-64 image](https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-11.3.0-amd64-netinst.iso).
 
 5. Copy the example variables and edit them to suit your needs:

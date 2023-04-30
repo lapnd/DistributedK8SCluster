@@ -4,7 +4,7 @@
 # nginx LoadBalancer, and the Kubernetes Dashboard. This creates a new
 # control plane and does not join an existing one.
 
-USAGE="Usage: [create_first,add_master,add_worker]"
+USAGE="Usage: [create_first]"
 
 set -xe
 
@@ -12,9 +12,8 @@ sleep 10
 FQDN=$(hostname -A)
 HOSTNAME=$(hostname -s)
 DOMAIN_NAME=$(cut -d "." -f2 <<< $FQDN)
-NM_IFACE="nm-$DOMAIN_NAME"
-VPN_IP=$(ip -f inet addr show $NM_IFACE  | sed -En -e 's/.*inet ([0-9.]+).*/\1/p')
-#ARCH=$(dpkg --print-architecture)
+IP_INTERFACE=$(ip a | grep -Po 'ens[0-9]+' | head -n1)
+VPN_IP=$(ip -f inet addr show $IP_INTERFACE  | sed -En -e 's/.*inet ([0-9.]+).*/\1/p')
 
 create_first_node() {
   # Initialize kubelet
@@ -27,7 +26,7 @@ create_first_node() {
   chown $(id -u):$(id -g) $HOME/.kube/config
 
   # Untaint master (necesarry to ensure metallb can run, as the API pod needs to be schedulable)
-  kubectl taint nodes --all node-role.kubernetes.io/master-
+  kubectl taint nodes --all node-role.kubernetes.io/master- | true
   kubectl taint node $HOSTNAME node-role.kubernetes.io/control-plane:NoSchedule-
 
   # Set up cilium
@@ -77,11 +76,5 @@ case "$1" in
   "create_first")
     echo "Creating first master node"
     create_first_node
-    ;;
-  "add_master")
-    echo "Adding a master node"
-    ;;
-  "add_worker")
-    echo "Adding a worker node to master node $2"
     ;;
 esac
