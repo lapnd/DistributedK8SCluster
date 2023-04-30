@@ -30,6 +30,9 @@ create_first_node() {
   kubectl taint nodes --all node-role.kubernetes.io/master-
   kubectl taint node $HOSTNAME node-role.kubernetes.io/control-plane:NoSchedule-
 
+  # Set up cilium
+  cilium install
+
   # Set up metallb (requires helm)
   curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
   chmod 700 get_helm.sh

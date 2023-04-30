@@ -1,0 +1,9 @@
+[Unit]
+Description=Running First Boot Script
+ConditionPathExists=!/first-boot-ran
+
+[Service]
+ExecStart=/opt/bin/first-boot-script.sh
+
+[Install]
+WantedBy=multi-user.target

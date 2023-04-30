@@ -96,6 +96,24 @@ template = {
             "destination": "/etc/cloud/cloud.cfg"
         },
         {
+            "type": "shell",
+            "inline": ["mkdir -p /opt/bin", "mkdir -p /etc/systemd/system/"],
+        },
+        {
+            "type": "file",
+            "source": "first-boot-script.sh",
+            "destination": "/opt/bin/"
+        },
+        {
+            "type": "file",
+            "source": "first-boot.service",
+            "destination": "/etc/systemd/system/"
+        },
+        {
+            "type": "shell",
+            "inline": ["systemctl enable first-boot.service"],
+        },
+        {
             "type": "ansible",
             "playbook_file": "../playbooks/setup-k8s.yml",
             "extra_arguments": ["--extra-vars", "{'root_password': '{{user `root_password`}}', 'username': '{{user `username`}}', 'password': '{{user `password`}}'}", "-vvv"]
