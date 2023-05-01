@@ -3,10 +3,60 @@
   hosts: first-master-node
   become: true
   tasks:
+    - name: Clean up old kubeadm stuff
+      command: kubeadm reset -f
+    - name: Get FQDN
+      shell: hostname -A | xargs
+      register: fqdn
+    - name: Get hostname
+      command: hostname -s
+      register: hostname
+    - name: Get ip interface
+      shell: ip a | grep -Po 'ens[0-9]+' | head -n1
+      register: ipinterface
+    - name: Get ip
+      shell: ip -f inet addr show {{ ipinterface.stdout }}  | sed -En -e 's/.*inet ([0-9.]+).*/\1/p'
+      register: ip
+    - name: Initialize kubeadm
+      command: kubeadm init --apiserver-advertise-address {{ ip.stdout }} --apiserver-cert-extra-sans {{ fqdn.stdout }} --pod-network-cidr 10.244.0.0/16 --node-name {{ hostname.stdout }} --ignore-preflight-errors Swap --cri-socket unix:///var/run/containerd/containerd.sock --control-plane-endpoint {{ fqdn.stdout }}
+    - name: Make kube home
+      command: mkdir -p $HOME/.kube
+    - name: Move kubeconfig
+      command: cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
+    - name: Change kubeconfig ownership
+      shell: chown $(id -u):$(id -g) $HOME/.kube/config
+    - name: Untaint master nodes so metallb can schedule on them
+      shell: kubectl taint nodes --all node-role.kubernetes.io/master- | true
+    - name: Untaint master nodes so metallb can schedule on them
+      command: kubectl taint node {{ hostname.stdout }} node-role.kubernetes.io/control-plane:NoSchedule-
+    - name: Download helm install script
+      command: curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    - name: Make helm install script executable
+      command: chmod 700 get_helm.sh
+    - name: Install helm
+      command: ./get_helm.sh
+    - name: Clean up helm install
+      command: rm get_helm.sh
+    - name: Install cilium
+      command: cilium install
     - name: Provision first master node
       ansible.builtin.script: ./provision.sh create_first
       args:
         executable: /usr/bin/bash
+    - name: Add metallb helm repo
+      command: helm repo add metallb https://metallb.github.io/metallb
+    - name: Install metallb
+      command: helm install --namespace metallb-system --create-namespace metallb metallb/metallb
+    - name: Deploy metallb
+      command: kubectl rollout status deployment metallb-controller -n metallb-system
+    - name: Wait ten seconds
+      command: sleep 10
+    - name: Set address pool
+      command: kubectl apply -f addresspool.yaml
+    - name: Set up nginx load balancer
+      command: helm upgrade --install ingress-nginx ingress-nginx --repo https://kubernetes.github.io/ingress-nginx --namespace ingress-nginx --create-namespace --set controller.service.loadBalancerIP=10.244.0.1
+    - name: Install kube dashboard
+      command: kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.5.0/aio/deploy/recommended.yaml
     - name: Set certificate rotation
       lineinfile: 
         path: /var/lib/kubelet/config.yaml
@@ -14,20 +64,73 @@
         line: 'rotateCertificates: {{ rotateCertificates }}'
         backrefs: yes
     - name: Get Discovery Token
-      command: openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
-      register: discovery-token
+      shell: openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+      register: discoverytoken
     - name: Get Auth Token
       command: kubeadm token create
-      register: auth-token
+      register: authtoken
+    - name: Get Certificate Key
+      shell: kubeadm init phase upload-certs --upload-certs | tail -1
+      register: certkey
+    - name: "Add K8S Token and Hash to dummy host"
+      add_host:
+        name: "K8S_TOKEN_HOLDER"
+        authtoken: "{{ authtoken.stdout }}"
+        certkey: "{{ certkey.stdout }}"
+        discoverytoken: "{{ discoverytoken.stdout }}"
 - name: Add a K8S node to the control plane
   hosts: other-master-node
   become: true
   tasks:
+    - name: add /usr/sbin to the path
+      copy:
+        dest: /etc/profile.d/custom-path.sh
+        content: 'PATH=$PATH:/usr/sbin'
+    - name: Clean up kubeadm
+      command: kubeadm reset -f 
     - name: Join master node to cluster
-      command: kubeadm join --token {{ auth-token.stdout }} {{ masterNode }}:6443 --discovery-token-ca-cert-hash {{ discovery-token.stdout }} --cri-socket unix:///var/run/containerd/containerd.sock --control-plane
+      shell: kubeadm join --token {{ hostvars["K8S_TOKEN_HOLDER"]["authtoken"] }} {{ masterNode }}:6443 --discovery-token-ca-cert-hash sha256:{{ hostvars["K8S_TOKEN_HOLDER"]["discoverytoken"] }} --cri-socket unix:///var/run/containerd/containerd.sock --control-plane --certificate-key {{ hostvars["K8S_TOKEN_HOLDER"]["certkey"] }} || true
 - name: Create a K8S worker node and connect it to the control pane
   hosts: workers
   become: true
   tasks:
+    - name: Clean up kubeadm
+      command: kubeadm reset -f 
     - name: Join worker node to cluster
-      command: kubeadm join --token {{ auth-token.stdout }} {{ masterNode }}:6443 --discovery-token-ca-cert-hash {{ discovery-token.stdout }} --cri-socket unix:///var/run/containerd/containerd.sock
+      command: kubeadm join --token {{ hostvars["K8S_TOKEN_HOLDER"]["authtoken"] }} {{ masterNode }}:6443 --discovery-token-ca-cert-hash sha256:{{ hostvars["K8S_TOKEN_HOLDER"]["discoverytoken"] }} --cri-socket unix:///var/run/containerd/containerd.sock
+- name: Set up ArgoCD in cluster
+  hosts: first-master-node
+  become: true
+  tasks:
+    - name: Create ArgoCD namespace
+      command: kubectl create namespace argocd
+    - name: Install ArgoCD
+      command: kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+    - name: install ArgoCD CLI
+      shell: curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64 && install -m 555 argocd-linux-amd64 /usr/local/bin/argocd && rm argocd-linux-amd64
+    - name: Setup ArgoCD
+      ansible.builtin.script: ./setup-argocd.sh
+      args:
+        executable: /usr/bin/bash
+    - name: Add prod repo
+      command: argocd repo add gitlab.com/kfs-mining/cluster/prod --type helm --name prod --enable-oci --username CalvinCreator --password glpat-qsrXEpswKGT88_orc4gc
+    - name: Add dev repo
+      command: argocd repo add gitlab.com/kfs-mining/cluster/dev --type helm --name dev --enable-oci --username CalvinCreator --password glpat-qsrXEpswKGT88_orc4gc
+- name: Get dashboard URL and token
+  hosts: first-master-node
+  become: true
+  tasks:
+    - name: Create ArgoCD namespace
+      command: kubectl create namespace argocd
+    - name: Install ArgoCD
+      command: kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+    - name: install ArgoCD CLI
+      shell: curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64 && install -m 555 argocd-linux-amd64 /usr/local/bin/argocd && rm argocd-linux-amd64
+    - name: Setup ArgoCD
+      ansible.builtin.script: ./setup-argocd.sh
+      args:
+        executable: /usr/bin/bash
+    - name: Add prod repo
+      command: argocd repo add gitlab.com/kfs-mining/cluster/prod --type helm --name prod --enable-oci --username CalvinCreator --password glpat-qsrXEpswKGT88_orc4gc
+    - name: Add dev repo
+      command: argocd repo add gitlab.com/kfs-mining/cluster/dev --type helm --name dev --enable-oci --username CalvinCreator --password glpat-qsrXEpswKGT88_orc4gc

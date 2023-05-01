@@ -50,7 +50,7 @@ template = {
                     "model": "virtio",
                     "bridge": "{{user `bridge`}}",
                     "firewall": True,
-                    "mtu": 1
+                    # "mtu": 1
                 }
             ],
             "disks": [
@@ -76,7 +76,7 @@ template = {
             "cloud_init": True,
             "cloud_init_storage_pool": "{{user `cloud_init_storage_pool`}}",
 
-            "vm_name": "{{ user `template_name` }}",
+            "vm_name": "debian-template",
             "vm_id": "{{ user `vm_id` }}",
             "memory": "2048",
 
@@ -112,11 +112,6 @@ template = {
         {
             "type": "shell",
             "inline": ["systemctl enable first-boot.service"],
-        },
-        {
-            "type": "ansible",
-            "playbook_file": "../playbooks/setup-k8s.yml",
-            "extra_arguments": ["--extra-vars", "{'root_password': '{{user `root_password`}}', 'username': '{{user `username`}}', 'password': '{{user `password`}}'}", "-vvv"]
         }
     ]
 }
