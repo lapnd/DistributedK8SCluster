@@ -28,7 +28,7 @@
     - name: Untaint master nodes so metallb can schedule on them
       shell: kubectl taint nodes --all node-role.kubernetes.io/master- | true
     - name: Untaint master nodes so metallb can schedule on them
-      command: kubectl taint node {{ hostname.stdout }} node-role.kubernetes.io/control-plane:NoSchedule-
+      command: kubectl taint node {{ hostname.stdout }} node-role.kubernetes.io/control-plane:NoSchedule- # TODO: do i need to do this?
     - name: Download helm install script
       command: curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
     - name: Make helm install script executable
@@ -39,10 +39,18 @@
       command: rm get_helm.sh
     - name: Install cilium
       command: cilium install
-    - name: Provision first master node
-      ansible.builtin.script: ./provision.sh create_first
-      args:
-        executable: /usr/bin/bash
+    - name: Set metallb options
+      copy:
+        dest: "addresspool.yaml"
+        content: |
+          apiVersion: metallb.io/v1beta1
+          kind: IPAddressPool
+          metadata:
+            name: first-pool
+            namespace: metallb-system
+          spec:
+            addresses:
+            - 10.244.0.0/16
     - name: Add metallb helm repo
       command: helm repo add metallb https://metallb.github.io/metallb
     - name: Install metallb
@@ -90,6 +98,12 @@
       command: kubeadm reset -f 
     - name: Join master node to cluster
       shell: kubeadm join --token {{ hostvars["K8S_TOKEN_HOLDER"]["authtoken"] }} {{ masterNode }}:6443 --discovery-token-ca-cert-hash sha256:{{ hostvars["K8S_TOKEN_HOLDER"]["discoverytoken"] }} --cri-socket unix:///var/run/containerd/containerd.sock --control-plane --certificate-key {{ hostvars["K8S_TOKEN_HOLDER"]["certkey"] }} || true
+    - name: Make kube home
+      command: mkdir -p $HOME/.kube
+    - name: Move kubeconfig
+      command: cp -f /etc/kubernetes/admin.conf $HOME/.kube/config
+    - name: Change kubeconfig ownership
+      shell: chown $(id -u):$(id -g) $HOME/.kube/config
 - name: Create a K8S worker node and connect it to the control pane
   hosts: workers
   become: true

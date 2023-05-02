@@ -50,7 +50,7 @@ template = {
                     "model": "virtio",
                     "bridge": "{{user `bridge`}}",
                     "firewall": True,
-                    # "mtu": 1
+                    "mtu": 1230
                 }
             ],
             "disks": [
@@ -69,7 +69,7 @@ template = {
             "http_directory": "./",
             "boot_wait": "10s",
             "boot_command": [
-                "<esc><wait>auto url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg<enter>"
+                "<esc><wait>auto url=http://100.107.112.32:{{ .HTTPPort }}/preseed.cfg<enter>"
             ],
             "unmount_iso": True,
 
@@ -84,9 +84,12 @@ template = {
             "cores": "2",
             "os": "l26",
 
-            "ssh_timeout": "90m",
+            "ssh_timeout": "15m",
             "ssh_username": "root",
-            "ssh_password": "packer"
+            "ssh_password": "packer",
+            # "ssh_bastion_host": "{{user `proxmox_node`}}",
+            # "ssh_bastion_username": "root",
+            # "ssh_bastion_private_key_file": "~/.ssh/id_rsa"
         }
     ],
     "provisioners": [
@@ -116,7 +119,11 @@ template = {
         {
             "type": "ansible",
             "playbook_file": "../playbooks/setup-k8s.yml",
-            "extra_arguments": ["--extra-vars", "{'root_password': '{{user `root_password`}}', 'username': '{{user `username`}}', 'password': '{{user `password`}}'}", "-vvv"]
+            "extra_arguments": ["--extra-vars", "{'root_password': '{{user `root_password`}}', 'username': '{{user `username`}}', 'password': '{{user `password`}}'}", "-vvv"],
+            "ansible_env_vars": [
+                "ANSIBLE_HOST_KEY_CHECKING=False",
+                "ANSIBLE_SSH_ARGS='-oHostKeyAlgorithms=+ssh-rsa -oPubkeyAcceptedKeyTypes=+ssh-rsa'"
+            ]
         }
     ]
 }

@@ -50,7 +50,7 @@ template = {
                     "model": "virtio",
                     "bridge": "{{user `bridge`}}",
                     "firewall": True,
-                    # "mtu": 1
+                    "mtu": 1230
                 }
             ],
             "disks": [
