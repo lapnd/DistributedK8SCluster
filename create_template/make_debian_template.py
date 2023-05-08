@@ -69,7 +69,7 @@ template = {
             "http_directory": "./",
             "boot_wait": "10s",
             "boot_command": [
-                "<esc><wait>auto url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg<enter>"
+                "<esc><wait>auto url=http://{{user `host_ip`}}:{{ .HTTPPort }}/preseed.cfg<enter>"
             ],
             "unmount_iso": True,
 
@@ -84,7 +84,7 @@ template = {
             "cores": "2",
             "os": "l26",
 
-            "ssh_timeout": "90m",
+            "ssh_timeout": "15m",
             "ssh_username": "root",
             "ssh_password": "packer"
         }
@@ -100,18 +100,13 @@ template = {
             "inline": ["mkdir -p /opt/bin", "mkdir -p /etc/systemd/system/"],
         },
         {
-            "type": "file",
-            "source": "first-boot-script.sh",
-            "destination": "/opt/bin/"
-        },
-        {
-            "type": "file",
-            "source": "first-boot.service",
-            "destination": "/etc/systemd/system/"
-        },
-        {
-            "type": "shell",
-            "inline": ["systemctl enable first-boot.service"],
+            "type": "ansible",
+            "playbook_file": "../playbooks/setup-debian.yml",
+            "extra_arguments": ["--extra-vars", "{'root_password': '{{user `root_password`}}', 'username': '{{user `username`}}', 'password': '{{user `password`}}'}", "-vvv"],
+            "ansible_env_vars": [
+                "ANSIBLE_HOST_KEY_CHECKING=False",
+                "ANSIBLE_SSH_ARGS='-oHostKeyAlgorithms=+ssh-rsa -oPubkeyAcceptedKeyTypes=+ssh-rsa'"
+            ]
         }
     ]
 }

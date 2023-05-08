@@ -69,7 +69,7 @@ template = {
             "http_directory": "./",
             "boot_wait": "10s",
             "boot_command": [
-                "<esc><wait>auto url=http://100.107.112.32:{{ .HTTPPort }}/preseed.cfg<enter>"
+                "<esc><wait>auto url=http://{{user `host_ip`}}:{{ .HTTPPort }}/preseed.cfg<enter>"
             ],
             "unmount_iso": True,
 
@@ -87,9 +87,6 @@ template = {
             "ssh_timeout": "15m",
             "ssh_username": "root",
             "ssh_password": "packer",
-            # "ssh_bastion_host": "{{user `proxmox_node`}}",
-            # "ssh_bastion_username": "root",
-            # "ssh_bastion_private_key_file": "~/.ssh/id_rsa"
         }
     ],
     "provisioners": [
@@ -101,20 +98,6 @@ template = {
         {
             "type": "shell",
             "inline": ["mkdir -p /opt/bin", "mkdir -p /etc/systemd/system/"],
-        },
-        {
-            "type": "file",
-            "source": "first-boot-script.sh",
-            "destination": "/opt/bin/"
-        },
-        {
-            "type": "file",
-            "source": "first-boot.service",
-            "destination": "/etc/systemd/system/"
-        },
-        {
-            "type": "shell",
-            "inline": ["systemctl enable first-boot.service"],
         },
         {
             "type": "ansible",

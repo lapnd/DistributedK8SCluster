@@ -1,0 +1,20 @@
+---
+- name: Debian -- setup debian
+  hosts: all
+  become: true
+  tasks:
+    - name: Update root user's password
+      user:
+        name: root
+        update_password: always
+        password: "{{root_password | password_hash('sha512')}}"
+    - name: Make normal user
+      user:
+        name: '{{ username }}'
+        password: "{{password | password_hash('sha512')}}"
+        groups:
+        - sudo
+        state: present
+        shell: /bin/bash
+        createhome: yes
+ 
