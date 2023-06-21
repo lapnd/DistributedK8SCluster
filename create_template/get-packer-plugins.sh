@@ -13,7 +13,6 @@ get_zipped_plugin() {
     trap "cleanup $dir" EXIT
     echo "Created tempdir: $dir"
     cd $dir
-    apt install unzip -y
     wget $plugin_url -O file.zip
     unzip -d archive file.zip
     mv archive/* ./$plugin_name
