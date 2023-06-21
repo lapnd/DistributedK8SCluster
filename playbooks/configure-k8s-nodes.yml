@@ -3,8 +3,6 @@
   hosts: first-master-node
   become: true
   tasks:
-    - name: Clean up old kubeadm stuff
-      command: kubeadm reset -f
     - name: Get FQDN
       shell: hostname -A | xargs
       register: fqdn
@@ -17,6 +15,8 @@
     - name: Get ip
       shell: ip -f inet addr show {{ ipinterface.stdout }}  | sed -En -e 's/.*inet ([0-9.]+).*/\1/p'
       register: ip
+    - name: Clean up kubeadm
+      command: kubeadm reset -f 
     - name: Initialize kubeadm
       command: kubeadm init --apiserver-advertise-address {{ ip.stdout }} --apiserver-cert-extra-sans {{ fqdn.stdout }} --pod-network-cidr 10.244.0.0/16 --node-name {{ hostname.stdout }} --ignore-preflight-errors Swap --cri-socket unix:///var/run/containerd/containerd.sock --control-plane-endpoint {{ fqdn.stdout }}
     - name: Make kube home
